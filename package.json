@@ -1,0 +1,31 @@
+{
+  "name": "dnsupdater",
+  "version": "1.0.0",
+  "description": "Update subdomain's record using OVH API when IP changed",
+  "main": "dnsupdater.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/komppa/dnsupdater.git"
+  },
+  "keywords": [
+    "dns",
+    "subdomain",
+    "ovh",
+    "updater"
+  ],
+  "author": "komppa",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/komppa/dnsupdater/issues"
+  },
+  "homepage": "https://github.com/komppa/dnsupdater#readme",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "node-fetch": "^2.6.1",
+    "ovh": "^2.0.3",
+    "winston": "^3.3.3"
+  }
+}
