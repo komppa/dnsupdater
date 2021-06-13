@@ -1,4 +1,4 @@
-const winston, { add } = require('winston')
+const winston = require('winston')
 const fetch = require('node-fetch')
 require('dotenv').config()
 const ovh = require('ovh')({
@@ -51,88 +51,109 @@ const err = (err) => {
 
 
 
-/* DNS */ 
+/**
+ * Check if domain exists on the user end.
+ * @async
+ * @param {string} domain - domain name that has the wanted subdomain 
+ * @returns {Promise<bool>} - Promise object represent the value if user owns the specific domain
+ */
 
 const domainExists = async (domain) => {
 
-    let promise = new Promise((res, rej) => {
-        ovh.request('GET', '/domain/zone/', (err, req) => {
-            r = req
-            res(r)
-        }); 
+    // OVH returns array of strings that contains the owned domain names
+    return new Promise(async(res, rej) => {
+        await ovh.request('GET', '/domain/zone/', (err, req) => {
+            if (req.includes(domain)) {
+                res(true)
+            } else {
+                res(false)
+            }
+        })
     })
-
-    let domains = await promise
-
-    if (domains.includes(domain)) {
-        return true
-    }
-
-    return false
 
 }
 
+/**
+ * Get DNS record IDs that specific domain name have
+ * @async
+ * @param {string} domain - domain name whose DNS record IDs is wanted
+ * @returns {Promise<Array<number>>} - Promise object represents the array of numbers - DNS records' IDs
+ */
 const getDnsRecordIds = async (domain) => {
 
-    let promise = new Promise((res, rej) => {
+    // OVH returns a list of numbers and each number in a list 
+    // represents the ID of the one subdomain record
+    return new Promise((res, rej) => {
         ovh.request('GET', '/domain/zone/' + domain + '/record', (err, req) => {
-            r = req
-            res(r)
-        }); 
+            res(req)
+        })
     })
-
-    let idArray = await promise
-
-    return idArray
 
 }
 
 
+/**
+ * @typedef {Object} DNSRecord
+ * @property {string} target Where subdomain points to 
+ * @property {number} id Rrecord's ID 
+ * @property {string} zone Domain name 
+ * @property {string} subDomain Subdomain's value (f.ex. www) 
+ * @property {string} ttl Record's Time To Live 
+ */
 
-const getDnsRecordDetailsById = async (id) => {
+/**
+ * Get record's details. 
+ * @param {number} id - ID of the DNS record 
+ * @returns {Promise<DNSRecord>} Promise object represents the record detail object
+ */
+const getDnsRecordDetailsById = async (domain, id) => {
 
-    let promise = new Promise((res, rej) => {
+    return new Promise((res, rej) => {
         ovh.request('GET', '/domain/zone/' + domain + '/record/' + id, (err, req) => {
-            r = req
-            res(r)
+            console.log("err", err)
+            res(req)
         }); 
     })
 
-    let recordDetails = await promise
-
-    return recordDetails
-
 }
 
-
+/**
+ * Updates DNS record.
+ * @async
+ * @param {number} id - DNS record's ID 
+ * @param {string} subDomain - name of the subdomain that will be updated 
+ * @param {string} target - Target address 
+ * @param {number} ttl - Record's Time To Live  
+ */
 const updateDnsRecord = async (id, subDomain, target, ttl) => {
 
     inf("@updateDnsRecord: id: " + id + ", subDomain: " + subDomain + ", target: " + target + ", ttl: " + ttl)
-
-    let promise = new Promise((res, rej) => {
-        ovh.request('PUT', '/domain/zone/' + domain + '/record/' + id, {
-            "subDomain": subDomain,
-            "target": target,
-            "ttl": ttl
-        }, (errStatus, req) => {
-            if (errStatus) {
-                err("Couldn't update the DNS record")
-                res(false)
-            }
-            
-            console.log(req)
-            res(true)
-        }); 
-    })
-    
+ 
+    ovh.request('PUT', '/domain/zone/' + domain + '/record/' + id, {
+        "subDomain": subDomain,
+        "target": target,
+        "ttl": ttl
+    }, (err, req) => {
+        if (err) {
+            err("Couldn't update the DNS record", err)
+            res(false)
+        }
+        
+        console.log(req)
+        res(true)
+    }) 
 
 }
 
-/* GENERAL */
-
+/**
+ * Get current IP address using IP resolver service.
+ * @async
+ * @param {string} addr - IP service's address 
+ * @returns {Promise<Object>} Object that contains current IP address (key is ip or ip_addr)
+ */
 const fetchIp = async (addr) => {
 
-    let promise = new Promise((res, rej) => {
+    return new Promise((res, rej) => {
         fetch(addr)
             .then(response => {
                 if (response.status !== 200) {
@@ -144,52 +165,26 @@ const fetchIp = async (addr) => {
             .then(result => {
                 
                 if (!result) {
-                    err("IP service " + add + " didn't return statuscode 200")
+                    err("IP service " + addr + " didn't return statuscode 200")
                     res(false)
                 } else {
                     res(result)
                 }
             })
-            .catch((error) => { 
-                console.log("CONNECTION BROKEN")
+            .catch(error => { 
+                console.log("CONNECTION BROKEN", error)
                 res(false) 
             })
     })
 
-    let myIP = await promise
-
-    return myIP
-
 }
 
-const getMyIpAddressPrimarySource = async () => {
-  
-    let promise = new Promise((res, rej) => {
-        fetchIp('https://ifconfig.co/json').then(ip => {
-            res(ip)
-        })
-    })
-
-    let ip = promise
-
-    return ip
-
-}
-
-const getMyIpAddressSecondarySource = async () =>  {
- 
-    let promise = new Promise((res, rej) => {
-        fetchIp('https://ifconfig.me/all.json').then(ip => {
-            res(ip)
-        })
-    })
-
-    let ip = promise
-
-    return ip
-
-}
-
+/**
+ * Validate that IPv4 address is in the correct format.
+ * @async
+ * @param {string} addr - IPv4 address
+ * @returns {bool} Status whether the IPv4 address is in the correct format
+ */
 const validateIp4Address = (addr) => {
     if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(addr)) {
         return true
@@ -198,10 +193,14 @@ const validateIp4Address = (addr) => {
     return false
 }
 
-
+/**
+ * Get current address using some of the IP resolving services. 
+ * Uses backup services if needed and in the end validates the received address. 
+ * @returns {Promise<string>} Promise object represents the current address
+ */
 const getCurrentLocalAddress = async () => {
 
-    let promise = new Promise( async(res, rej) => {
+    return new Promise( async(res, rej) => {
 
         // Get current IP address for this server
 
@@ -226,11 +225,13 @@ const getCurrentLocalAddress = async () => {
 
     })
 
-    return promise
-
 }
 
-
+/**
+ * Startup script. Fetches current target for the subdomain and compaires it against 
+ * current address from the IP resolver service.
+ * @async  
+ */
 const startup = async () => {
 
     let ids = []
@@ -296,7 +297,10 @@ const startup = async () => {
 
 
 let i = 0
-
+/**
+ * Loop checking whether address of the current machine has been changed.
+ * @async
+ */
 const loop = async () => {
 
     let receivedAddress = await getCurrentLocalAddress()
