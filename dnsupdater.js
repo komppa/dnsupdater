@@ -110,7 +110,11 @@ const getDnsRecordDetailsById = async (domain, id) => {
 
     return new Promise((res, rej) => {
         ovh.request('GET', '/domain/zone/' + domain + '/record/' + id, (err, req) => {
-            console.log("err", err)
+            if (err) {
+                err("Couldn't get record\'s details by ID", err)
+                res(false)
+            }
+            
             res(req)
         }); 
     })
@@ -136,11 +140,7 @@ const updateDnsRecord = async (id, subDomain, target, ttl) => {
     }, (err, req) => {
         if (err) {
             err("Couldn't update the DNS record", err)
-            res(false)
         }
-        
-        console.log(req)
-        res(true)
     }) 
 
 }
@@ -241,13 +241,12 @@ const startup = async () => {
 
 
     let domain_exist = await domainExists(domain)
-    
     if (domain_exist) {
 
         ids = await getDnsRecordIds(domain)
         
         for (id in ids) {
-            details = await getDnsRecordDetailsById(ids[id])
+            details = await getDnsRecordDetailsById(domain, ids[id])
             if (details.subDomain === subDomain) {
                 recordId = details.id
                 currentOvhAddress = details.target
@@ -312,7 +311,7 @@ const loop = async () => {
         if (receivedAddress !== currentLocalAddress) {
             currentLocalAddress = receivedAddress
             console.log("UPDATING DNS RECORD")
-            updateDnsRecord(recordId, subDomain, currentLocalAddress, 300)
+            updateDnsRecord(recordId, subDomain, currentLocalAddress, domainTtl)
             inf("@loop: Addresses were different, received IP " + receivedAddress + " when IP was last time (localip) is " + currentLocalAddress)
         } else {
             inf("@loop: Addresses were the same at " + new Date() + " received IP "+ receivedAddress + " when IP was last time (localip) is " + currentLocalAddress)
