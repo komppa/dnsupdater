@@ -42,10 +42,10 @@ const inf = (msg) => {
     })
 }
 
-const err = (err) => {
+const err = (error) => {
     logger.log({
         level: "error",
-        message: err
+        message: error
     })
 }
 
@@ -62,7 +62,7 @@ const domainExists = async (domain) => {
 
     // OVH returns array of strings that contains the owned domain names
     return new Promise(async(res, rej) => {
-        await ovh.request('GET', '/domain/zone/', (err, req) => {
+        await ovh.request('GET', '/domain/zone/', (error, req) => {
             if (req.includes(domain)) {
                 res(true)
             } else {
@@ -109,9 +109,10 @@ const getDnsRecordIds = async (domain) => {
 const getDnsRecordDetailsById = async (domain, id) => {
 
     return new Promise((res, rej) => {
-        ovh.request('GET', '/domain/zone/' + domain + '/record/' + id, (err, req) => {
-            if (err) {
-                err("Couldn't get record\'s details by ID", err)
+        ovh.request('GET', '/domain/zone/' + domain + '/record/' + id, (error, req) => {
+            if (error) {
+                err("Couldn't get record\'s details by ID")
+                err(error)
                 res(false)
             }
             
@@ -137,9 +138,10 @@ const updateDnsRecord = async (id, subDomain, target, ttl) => {
         "subDomain": subDomain,
         "target": target,
         "ttl": ttl
-    }, (err, req) => {
-        if (err) {
-            err("Couldn't update the DNS record", err)
+    }, (error, req) => {
+        if (error) {
+            err("Couldn't update the DNS record")
+            err(error)
         }
     }) 
 
@@ -172,7 +174,8 @@ const fetchIp = async (addr) => {
                 }
             })
             .catch(error => { 
-                console.log("CONNECTION BROKEN", error)
+                console.log("CONNECTION BROKEN")
+                err("CONNECTION BROKEN")
                 res(false) 
             })
     })
